@@ -21,20 +21,21 @@
 #include "can.h"
 
 /* USER CODE BEGIN 0 */
+#include <stdbool.h>
+#include <string.h>
 uint32_t CAN_ID_DAQEN = 0x70;
 uint32_t CAN_ID_DAQData = 0x71;
 uint32_t Rx_CANID = 0;
 uint8_t DAQData_to_DataLogger[8];
 uint8_t DAQEN[8];
 uint8_t CAN_RxData[8];
+volatile bool g_daq_enabled = true;
 /* USER CODE END 0 */
 
 CAN_HandleTypeDef hcan;
 
 /* CAN init function */
-void MX_CAN_Init(void)
-{
-
+void MX_CAN_Init(void) {
   /* USER CODE BEGIN CAN_Init 0 */
 
   /* USER CODE END CAN_Init 0 */
@@ -54,25 +55,20 @@ void MX_CAN_Init(void)
   hcan.Init.AutoRetransmission = DISABLE;
   hcan.Init.ReceiveFifoLocked = DISABLE;
   hcan.Init.TransmitFifoPriority = DISABLE;
-  if (HAL_CAN_Init(&hcan) != HAL_OK)
-  {
+  if (HAL_CAN_Init(&hcan) != HAL_OK) {
     Error_Handler();
   }
   /* USER CODE BEGIN CAN_Init 2 */
 
   /* USER CODE END CAN_Init 2 */
-
 }
 
-void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
-{
-
+void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle) {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-  if(canHandle->Instance==CAN1)
-  {
-  /* USER CODE BEGIN CAN1_MspInit 0 */
+  if (canHandle->Instance == CAN1) {
+    /* USER CODE BEGIN CAN1_MspInit 0 */
 
-  /* USER CODE END CAN1_MspInit 0 */
+    /* USER CODE END CAN1_MspInit 0 */
     /* CAN1 clock enable */
     __HAL_RCC_CAN1_CLK_ENABLE();
 
@@ -100,20 +96,17 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     HAL_NVIC_EnableIRQ(USB_LP_CAN1_RX0_IRQn);
     HAL_NVIC_SetPriority(CAN1_RX1_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(CAN1_RX1_IRQn);
-  /* USER CODE BEGIN CAN1_MspInit 1 */
+    /* USER CODE BEGIN CAN1_MspInit 1 */
 
-  /* USER CODE END CAN1_MspInit 1 */
+    /* USER CODE END CAN1_MspInit 1 */
   }
 }
 
-void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
-{
+void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle) {
+  if (canHandle->Instance == CAN1) {
+    /* USER CODE BEGIN CAN1_MspDeInit 0 */
 
-  if(canHandle->Instance==CAN1)
-  {
-  /* USER CODE BEGIN CAN1_MspDeInit 0 */
-
-  /* USER CODE END CAN1_MspDeInit 0 */
+    /* USER CODE END CAN1_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_CAN1_CLK_DISABLE();
 
@@ -121,47 +114,45 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
     PB8     ------> CAN_RX
     PB9     ------> CAN_TX
     */
-    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_8|GPIO_PIN_9);
+    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_8 | GPIO_PIN_9);
 
     /* CAN1 interrupt Deinit */
-  /* USER CODE BEGIN CAN1:USB_HP_CAN1_TX_IRQn disable */
+    /* USER CODE BEGIN CAN1:USB_HP_CAN1_TX_IRQn disable */
     /**
      * Uncomment the line below to disable the "USB_HP_CAN1_TX_IRQn" interrupt
      * Be aware, disabling shared interrupt may affect other IPs
      */
     /* HAL_NVIC_DisableIRQ(USB_HP_CAN1_TX_IRQn); */
-  /* USER CODE END CAN1:USB_HP_CAN1_TX_IRQn disable */
+    /* USER CODE END CAN1:USB_HP_CAN1_TX_IRQn disable */
 
-  /* USER CODE BEGIN CAN1:USB_LP_CAN1_RX0_IRQn disable */
+    /* USER CODE BEGIN CAN1:USB_LP_CAN1_RX0_IRQn disable */
     /**
      * Uncomment the line below to disable the "USB_LP_CAN1_RX0_IRQn" interrupt
      * Be aware, disabling shared interrupt may affect other IPs
      */
     /* HAL_NVIC_DisableIRQ(USB_LP_CAN1_RX0_IRQn); */
-  /* USER CODE END CAN1:USB_LP_CAN1_RX0_IRQn disable */
+    /* USER CODE END CAN1:USB_LP_CAN1_RX0_IRQn disable */
 
     HAL_NVIC_DisableIRQ(CAN1_RX1_IRQn);
-  /* USER CODE BEGIN CAN1_MspDeInit 1 */
+    /* USER CODE BEGIN CAN1_MspDeInit 1 */
 
-  /* USER CODE END CAN1_MspDeInit 1 */
+    /* USER CODE END CAN1_MspDeInit 1 */
   }
 }
 
 /* USER CODE BEGIN 1 */
 void CAN_SendMsg(uint16_t msgID, uint8_t* Data) {
-  CAN_TxHeaderTypeDef TxHeader;
+  CAN_TxHeaderTypeDef TxHeader = {0};
   TxHeader.StdId = msgID;  // stdID
   TxHeader.RTR = CAN_RTR_DATA;
   TxHeader.IDE = CAN_ID_STD;  // standard mode
   TxHeader.DLC = 8;           // data length
   TxHeader.TransmitGlobalTime = DISABLE;
 
+  uint32_t TxMailbox;
   while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) < 1) {
   }  // waiting valid mailbox
-  uint32_t TxMailbox;
-
-  if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, Data, &TxMailbox) != HAL_OK) {
-  }
+  (void)HAL_CAN_AddTxMessage(&hcan, &TxHeader, Data, &TxMailbox);
 }
 
 uint8_t bsp_can1_filter_config(void) {
@@ -171,32 +162,20 @@ uint8_t bsp_can1_filter_config(void) {
   filter.FilterScale = CAN_FILTERSCALE_32BIT;
   filter.FilterBank = 0;
   filter.FilterFIFOAssignment = CAN_FILTER_FIFO0;  // set FIFO mode
+  // only allow 0x70 // All 0 means no messages are filtered and all messages are received.
   filter.FilterIdLow = 0;
-  filter.FilterIdHigh = 0;
+  filter.FilterIdHigh = (CAN_ID_DAQEN << 5);
   filter.FilterMaskIdLow = 0;
-  filter.FilterMaskIdHigh = 0;  // All 0 means no messages are filtered and all messages are received.
-  HAL_CAN_ConfigFilter(&hcan, &filter);
+  filter.FilterMaskIdHigh = (0x7FF << 5);
+  return (HAL_CAN_ConfigFilter(&hcan, &filter) == HAL_OK);
 }
 
-static CAN_RxHeaderTypeDef RxMessage;
+static CAN_RxHeaderTypeDef sRxHeader;
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
   uint8_t data[8];
-  HAL_StatusTypeDef status;
-
-  status = HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxMessage, data);
-  if (HAL_OK == status) {
-    uint16_t rx_id = RxMessage.StdId;
-    if (rx_id == 0x70) {
-      uint8_t enable_flag = data[0];
-      if (enable_flag == 1) {
-        // DAQ_Enable();  //還沒寫
-      } else {
-        // DAQ_Disable(); //還沒寫
-      }
-    } else if (rx_id == 0x71) {
-      // memcpy(CAN_RxData, data, 8);
-      Rx_CANID = rx_id;
-    }
+  if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &sRxHeader, data) != HAL_OK) return;
+  if (sRxHeader.IDE == CAN_ID_STD && sRxHeader.StdId == CAN_ID_DAQEN) {
+    g_daq_enabled = (data[0] != 0);
   }
 }
 
