@@ -156,7 +156,7 @@ int main(void) {
 
     /* USER CODE BEGIN 3 */
     if (g_daq_enabled) {
-      CAN_SendMsg(CAN_ID_DAQData, DAQData_to_DataLogger);
+      CAN_SendMsg(CA_DAQ_DATA, DAQData_to_DataLogger);
     }
     HAL_Delay(500);
   }

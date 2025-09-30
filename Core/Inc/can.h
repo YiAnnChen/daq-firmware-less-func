@@ -43,8 +43,8 @@ extern "C" {
 extern CAN_HandleTypeDef hcan;
 
 /* USER CODE BEGIN Private defines */
-extern uint32_t CAN_ID_DAQEN;    // 0x70
-extern uint32_t CAN_ID_DAQData;  // 0x71
+extern uint32_t CA_DAQ_EN;    // 0x70
+extern uint32_t CA_DAQ_DATA;  // 0x71
 extern uint8_t DAQData_to_DataLogger[8];
 extern uint8_t DAQEN[8];
 extern uint8_t CAN_RxData[8];
