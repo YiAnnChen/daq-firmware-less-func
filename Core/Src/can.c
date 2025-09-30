@@ -23,8 +23,8 @@
 /* USER CODE BEGIN 0 */
 #include <stdbool.h>
 #include <string.h>
-uint32_t CAN_ID_DAQEN = 0x70;
-uint32_t CAN_ID_DAQData = 0x71;
+uint32_t CA_DAQ_EN = 0x70;    // CA_DAQ_EN CAN_ID_DAQEN
+uint32_t CA_DAQ_DATA = 0x71;  // CA_DAQ_DATA CAN_ID_DAQData
 uint32_t Rx_CANID = 0;
 uint8_t DAQData_to_DataLogger[8];
 uint8_t DAQEN[8];
@@ -164,7 +164,7 @@ uint8_t bsp_can1_filter_config(void) {
   filter.FilterFIFOAssignment = CAN_FILTER_FIFO0;  // set FIFO mode
   // only allow 0x70 // All 0 means no messages are filtered and all messages are received.
   filter.FilterIdLow = 0;
-  filter.FilterIdHigh = (CAN_ID_DAQEN << 5);
+  filter.FilterIdHigh = (CA_DAQ_EN << 5);
   filter.FilterMaskIdLow = 0;
   filter.FilterMaskIdHigh = (0x7FF << 5);
   return (HAL_CAN_ConfigFilter(&hcan, &filter) == HAL_OK);
@@ -174,7 +174,7 @@ static CAN_RxHeaderTypeDef sRxHeader;
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
   uint8_t data[8];
   if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &sRxHeader, data) != HAL_OK) return;
-  if (sRxHeader.IDE == CAN_ID_STD && sRxHeader.StdId == CAN_ID_DAQEN) {
+  if (sRxHeader.IDE == CAN_ID_STD && sRxHeader.StdId == CA_DAQ_EN) {
     g_daq_enabled = (data[0] != 0);
   }
 }
