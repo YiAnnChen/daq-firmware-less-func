@@ -152,6 +152,8 @@ int main(void) {
     DAQData_to_DataLogger[5] = (int)*flow_rate & 0xFF;         // FLOW_RATE(L)
     DAQData_to_DataLogger[6] = FAN_PWM;                        // FAN_PWM
     DAQData_to_DataLogger[7] = PUMP_PWM;                       // PUMP_PWM
+
+    *flow_rate = 0;
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
