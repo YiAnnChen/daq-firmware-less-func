@@ -2,7 +2,7 @@ BUILD_DIR = build
 TARGET := stm32f103c8
 RTT_ADDR := 0x20000000
 BUILD_TYPE := Debug
-PROJ_NAME := daq-firmware
+PROJ_NAME := Cooling_DAQ
 
 all:
 	mkdir -p $(BUILD_DIR)

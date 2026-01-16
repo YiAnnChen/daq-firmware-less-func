@@ -59,5 +59,3 @@ build/
 .ccls-cache
 cmake-*/
 .DS_Store
-CMakeCache.txt
-CMakeFiles/
