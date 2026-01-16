@@ -19,7 +19,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Set the project name
-set(CMAKE_PROJECT_NAME DAQ)
+set(CMAKE_PROJECT_NAME Cooling_DAQ)
 
 # Include toolchain file
 include("cmake/gcc-arm-none-eabi.cmake")
