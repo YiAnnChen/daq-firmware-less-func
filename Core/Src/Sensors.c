@@ -1,4 +1,5 @@
 #include "Sensors.h"
+#include "usart.h"
 
 
 static int isRxed;
@@ -18,19 +19,6 @@ static inline int int_to_int(uint8_t k) {
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) { 
   // SEGGER_RTT_printf(0, "hello world!\n"); 
   isRxed = 1;
-}
-
-void uart_init(UART_HandleTypeDef* huart, int baudrate) {
-  huart->Init.BaudRate = baudrate;
-  huart->Init.WordLength = UART_WORDLENGTH_8B;
-  huart->Init.StopBits = UART_STOPBITS_1;
-  huart->Init.Parity = UART_PARITY_NONE;
-  huart->Init.Mode = UART_MODE_TX_RX;
-  huart->Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart->Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_HalfDuplex_Init(huart) != HAL_OK) {
-    Error_Handler();
-  }
 }
 
 void DS18B20_WriteByte(UART_HandleTypeDef* huart, uint8_t data) {

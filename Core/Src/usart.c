@@ -262,5 +262,16 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 }
 
 /* USER CODE BEGIN 1 */
-
+void uart_init(UART_HandleTypeDef* huart, int baudrate) {
+  huart->Init.BaudRate = baudrate;
+  huart->Init.WordLength = UART_WORDLENGTH_8B;
+  huart->Init.StopBits = UART_STOPBITS_1;
+  huart->Init.Parity = UART_PARITY_NONE;
+  huart->Init.Mode = UART_MODE_TX_RX;
+  huart->Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart->Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_HalfDuplex_Init(huart) != HAL_OK) {
+    Error_Handler();
+  }
+}
 /* USER CODE END 1 */

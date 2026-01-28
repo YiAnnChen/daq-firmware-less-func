@@ -10,7 +10,6 @@
 float* fetch_flowrate();
 
 // Temperature sensors onewire communication implementation
-void uart_init(UART_HandleTypeDef* huart, int baudrate);
 void DS18B20_WriteByte(UART_HandleTypeDef* huart, uint8_t data);
 uint8_t DS18B20_ReadByte(UART_HandleTypeDef* huart);
 uint8_t DS18B20_Init(UART_HandleTypeDef* huart);

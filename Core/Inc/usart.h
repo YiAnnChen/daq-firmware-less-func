@@ -42,6 +42,7 @@ extern UART_HandleTypeDef huart2;
 
 void MX_USART1_UART_Init(void);
 void MX_USART2_UART_Init(void);
+void uart_init(UART_HandleTypeDef* huart, int baudrate);
 
 /* USER CODE BEGIN Prototypes */
 
