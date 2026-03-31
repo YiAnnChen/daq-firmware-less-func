@@ -23,8 +23,8 @@
 /* USER CODE BEGIN 0 */
 #include <stdbool.h>
 #include <string.h>
-uint32_t CA_DAQ_EN = 0x70;    // CA_DAQ_EN CAN_ID_DAQEN
-uint32_t CA_DAQ_DATA = 0x71;  // CA_DAQ_DATA CAN_ID_DAQData
+#include "can_addr_def.h"
+#include "can_log.h"
 uint32_t Rx_CANID = 0;
 uint8_t DAQData_to_DataLogger[8];
 uint8_t DAQEN[8];
@@ -174,9 +174,11 @@ static CAN_RxHeaderTypeDef sRxHeader;
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
   uint8_t data[8];
   if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &sRxHeader, data) != HAL_OK) return;
+  CAN_Log_Update(sRxHeader.StdId, data);
   if (sRxHeader.IDE == CAN_ID_STD && sRxHeader.StdId == CA_DAQ_EN) {
     g_daq_enabled = (data[0] != 0);
   }
 }
 
+void CAN_PrintAll(void) { CAN_Log_PrintAll(); }
 /* USER CODE END 1 */

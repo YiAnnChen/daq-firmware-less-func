@@ -1,3 +1,6 @@
 [submodule "CAN_ADDR"]
 	path = CAN_ADDR
 	url = https://github.com/ncku-formula-racing/CAN_ADDR.git
+[submodule "firmware_helper"]
+	path = firmware_helper
+	url = git@github.com:ncku-formula-racing/firmware_helper.git

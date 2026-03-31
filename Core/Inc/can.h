@@ -43,8 +43,6 @@ extern "C" {
 extern CAN_HandleTypeDef hcan;
 
 /* USER CODE BEGIN Private defines */
-extern uint32_t CA_DAQ_EN;    // 0x70
-extern uint32_t CA_DAQ_DATA;  // 0x71
 extern uint8_t DAQData_to_DataLogger[8];
 extern uint8_t DAQEN[8];
 extern uint8_t CAN_RxData[8];
@@ -57,6 +55,7 @@ void MX_CAN_Init(void);
 /* USER CODE BEGIN Prototypes */
 void CAN_SendMsg(uint16_t msgID, uint8_t* Data);
 uint8_t bsp_can1_filter_config(void);
+void CAN_PrintAll(void);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

@@ -31,6 +31,7 @@
 /* USER CODE BEGIN Includes */
 #include "SEGGER_RTT.h"
 #include "Sensors.h"
+#include "can_addr_def.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -159,6 +160,7 @@ int main(void) {
     if (g_daq_enabled) {
       CAN_SendMsg(CA_DAQ_DATA, DAQData_to_DataLogger);
     }
+    CAN_PrintAll();
     HAL_Delay(500);
   }
   /* USER CODE END 3 */
