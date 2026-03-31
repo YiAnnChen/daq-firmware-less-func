@@ -43,8 +43,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-static uint32_t w;
-static uint32_t tim1 = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -368,14 +367,9 @@ void USART2_IRQHandler(void)
 
 /* USER CODE BEGIN 1 */
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
-  w = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-  static float* flow_rate = NULL;
-  if(!flow_rate) flow_rate = fetch_flowrate();
-  
-  *flow_rate = (float)((10000/(w - tim1))/7.5)*1000;
-  // SEGGER_RTT_printf(0, "tick = %d\n", w);
-  // SEGGER_RTT_printf(0, "flow rate = %d L/min\n", (int)*flow_rate);
-  
-  tim1 = w;
+  if (htim->Instance == TIM1) {
+    uint32_t capture = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+    Sensor_Flow_ProcessPulse(capture);
+  }
 }
 /* USER CODE END 1 */
