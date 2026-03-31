@@ -7,7 +7,8 @@
 
 
 // water flow rate
-float* fetch_flowrate();
+void Sensor_Flow_ProcessPulse(uint32_t capture_value);
+float Sensor_Flow_GetRate(void);
 
 // Temperature sensors onewire communication implementation
 void DS18B20_WriteByte(UART_HandleTypeDef* huart, uint8_t data);

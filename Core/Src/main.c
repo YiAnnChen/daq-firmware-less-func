@@ -51,7 +51,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-static float *flow_rate;
+static float flow_rate = 0.0f;
 // static int* isRxed;
 
 /* USER CODE END PV */
@@ -108,7 +108,6 @@ int main(void) {
   /* USER CODE BEGIN 2 */
   HAL_Delay(500);
   SEGGER_RTT_printf(0, "start\n");
-  flow_rate = fetch_flowrate();
   HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_1);
   HAL_TIM_IC_Start(&htim1, TIM_CHANNEL_1);
   if (HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&voltage, 1) != HAL_OK) {
@@ -141,19 +140,19 @@ int main(void) {
     result = voltage * 3300 / 4095;
     SEGGER_RTT_printf(0, "voltage = %d\n", result);
 
-    SEGGER_RTT_printf(0, "flow rate = %d mL/min\n", (int)*flow_rate);
+    flow_rate = Sensor_Flow_GetRate();
+    SEGGER_RTT_printf(0, "flow rate = %d mL/min\n", (int)flow_rate);
 
     HAL_Delay(500);
 
     DAQData_to_DataLogger[2] = (result >> 8) & 0xFF;  // PRESSURE(H)
     DAQData_to_DataLogger[3] = result & 0xFF;         // PRESSURE(L)
 
-    DAQData_to_DataLogger[4] = ((int)*flow_rate >> 8) & 0xFF;  // FLOW_RATE(H)
-    DAQData_to_DataLogger[5] = (int)*flow_rate & 0xFF;         // FLOW_RATE(L)
+    DAQData_to_DataLogger[4] = ((int)flow_rate >> 8) & 0xFF;   // FLOW_RATE(H)
+    DAQData_to_DataLogger[5] = (int)flow_rate & 0xFF;          // FLOW_RATE(L)
     DAQData_to_DataLogger[6] = FAN_PWM;                        // FAN_PWM
     DAQData_to_DataLogger[7] = PUMP_PWM;                       // PUMP_PWM
 
-    *flow_rate = 0;
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

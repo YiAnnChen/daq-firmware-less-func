@@ -4,10 +4,19 @@
 
 static int isRxed;
 static uint8_t RxData[8];
-static float flow_rate;
+static float flow_rate = 0.0f;
+static uint32_t last_capture = 0;
 
-float* fetch_flowrate() {
-  return &flow_rate;
+void Sensor_Flow_ProcessPulse(uint32_t capture_value) {
+  uint32_t diff = capture_value - last_capture;
+  flow_rate = (float)((10000.0f / diff) / 7.5f) * 1000.0f;
+  last_capture = capture_value;
+}
+
+float Sensor_Flow_GetRate(void) {
+  float temp = flow_rate;
+  flow_rate = 0.0f;
+  return temp;
 }
 
 static inline int int_to_int(uint8_t k) {
