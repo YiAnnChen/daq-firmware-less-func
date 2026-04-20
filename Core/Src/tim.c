@@ -225,14 +225,17 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle) {
 
 /* USER CODE BEGIN 1 */
 void SetPumpDuty(uint8_t percent) {
-  FAN_PWM = percent;
+  if(percent > 100) percent = 100;
+  PUMP_PWM = percent;
   uint16_t pwm_val = (uint16_t)(499 * percent / 100);
   __HAL_TIM_SetCompare(&htim2, TIM_CHANNEL_1, pwm_val);
 }
 
 void SetFanDuty(uint8_t percent) {
-  PUMP_PWM = percent;
+  if(percent > 100) percent = 100; 
+  FAN_PWM = percent;
   uint16_t pwm_val = (uint16_t)(499 * percent / 100);
   __HAL_TIM_SetCompare(&htim2, TIM_CHANNEL_2, pwm_val);
 }
+
 /* USER CODE END 1 */

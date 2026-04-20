@@ -44,8 +44,14 @@ extern CAN_HandleTypeDef hcan;
 
 /* USER CODE BEGIN Private defines */
 extern uint8_t DAQData_to_DataLogger[8];
-extern uint8_t DAQEN[8];
-extern uint8_t CAN_RxData[8];
+
+//inverter and BMS voltage storage  (unit: 0.1V)
+extern volatile uint16_t g_inv_left_voltage;
+extern volatile uint16_t g_inv_right_voltage;
+extern volatile uint16_t g_bms_voltage;
+
+//True after first voltage frame is received
+extern volatile bool g_voltage_received;
 
 extern volatile bool g_daq_enabled;
 /* USER CODE END Private defines */
@@ -55,7 +61,7 @@ void MX_CAN_Init(void);
 /* USER CODE BEGIN Prototypes */
 void CAN_SendMsg(uint16_t msgID, uint8_t* Data);
 uint8_t bsp_can1_filter_config(void);
-void CAN_PrintAll(void);
+
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

@@ -29,6 +29,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdbool.h>
 #include "SEGGER_RTT.h"
 #include "Sensors.h"
 #include "can_addr_def.h"
@@ -41,7 +42,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define PWM_STEP_PCT          1   //percentage increase per step (1 %)
+#define PWM_STEP_INTERVAL_MS  100  //ms between steps  -> 100 steps x 100ms = 10 s total ramp
+#define DAQ_REPORT_INTERVAL_MS 500 //how often to broadcast DAQ_DATA frame
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -52,8 +55,14 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-static float flow_rate = 0.0f;
-// static int* isRxed;
+extern volatile uint16_t g_inv_left_voltage;
+extern volatile uint16_t g_inv_right_voltage;
+extern volatile uint16_t g_bms_voltage;
+extern volatile bool     g_voltage_received;
+extern volatile bool     g_daq_enabled;
+extern uint8_t           DAQData_to_DataLogger[8];
+extern uint8_t           FAN_PWM;
+extern uint8_t           PUMP_PWM;
 
 /* USER CODE END PV */
 
@@ -65,8 +74,20 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-extern uint8_t FAN_PWM;
-extern uint8_t PUMP_PWM;
+static void DAQ_SendReport(void){
+  DAQData_to_DataLogger[CA_DAQ_PRE_TEMP]    = 0;
+  DAQData_to_DataLogger[CA_DAQ_POST_TEMP]   = 0;
+  DAQData_to_DataLogger[CA_DAQ_PRESSURE_H]  = 0;
+  DAQData_to_DataLogger[CA_DAQ_PRESSURE_L]  = 0;
+  DAQData_to_DataLogger[CA_DAQ_FLOW_RATE_H] = 0;
+  DAQData_to_DataLogger[CA_DAQ_FLOW_RATE_L] = 0;
+  DAQData_to_DataLogger[CA_DAQ_FAN_PWM]     = FAN_PWM;
+  DAQData_to_DataLogger[CA_DAQ_PUMP_PWM]    = PUMP_PWM;
+
+  if (g_daq_enabled) {
+    CAN_SendMsg(CA_DAQ_DATA, DAQData_to_DataLogger);
+  }
+}
 /* USER CODE END 0 */
 
 /**
@@ -75,9 +96,6 @@ extern uint8_t PUMP_PWM;
  */
 int main(void) {
   /* USER CODE BEGIN 1 */
-  int DS18B20_Temp;
-  uint16_t voltage;
-  uint16_t result;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -108,60 +126,70 @@ int main(void) {
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
   HAL_Delay(500);
-  SEGGER_RTT_printf(0, "start\n");
-  HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_1);
-  HAL_TIM_IC_Start(&htim1, TIM_CHANNEL_1);
-  if (HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&voltage, 1) != HAL_OK) {
-    SEGGER_RTT_printf(0, "ADC initialization error!\n");
-  }
+  SEGGER_RTT_printf(0, "DAQ start\n");
 
   bsp_can1_filter_config();
   HAL_CAN_Start(&hcan);
-  HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
+  HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING); //start RX interrupt
 
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);  // FAN
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);  // PUMP
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);  // PUMP
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);  // FAN
 
-  SetFanDuty(60);   // FAN
-  SetPumpDuty(70);  // PUMP
+  SetFanDuty(0);   
+  SetPumpDuty(0);  
+
+  //MODE 1: Wait for at least one voltage frame from inverter / BMS 
+  SEGGER_RTT_printf(0, "DAQ waiting for voltage frames...\n");
+  while(!g_voltage_received){
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); //blink LED while waiting
+    HAL_Delay(200);
+  }
+  SEGGER_RTT_printf(0, "DAQ voltage received! INV_L=%d INV_R=%d BMS=%d (x0.1V)\n",
+                    g_inv_left_voltage, g_inv_right_voltage, g_bms_voltage);
+
+  //MODE 2: Ramp PWM from 0 % to 100 %
+  SEGGER_RTT_printf(0, "DAQ starting PWM ramp...\n");
+
+  uint8_t  current_pwm    = 0;
+  uint32_t last_step_tick = HAL_GetTick();
+  uint32_t last_rpt_tick  = HAL_GetTick();
+
+  while(current_pwm < 100){
+    uint32_t now = HAL_GetTick();
+
+    //Increment PWM one step every PWM_STEP_INTERVAL_MS
+    if(now - last_step_tick >= PWM_STEP_INTERVAL_MS){
+      current_pwm += PWM_STEP_PCT;
+      if(current_pwm > 100) current_pwm = 100;
+      SetFanDuty(current_pwm);
+      SetPumpDuty(current_pwm);
+      last_step_tick = now;
+      SEGGER_RTT_printf(0, "DAQ PWM updated: %d%%\n", current_pwm);
+      HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    }
+    //Report over CAN at a slower rate during ramp
+    if(now - last_rpt_tick >= DAQ_REPORT_INTERVAL_MS){
+      DAQ_SendReport();
+      last_rpt_tick = now;
+    }
+  }
+  SEGGER_RTT_printf(0, "DAQ ramp complete – PWM at 100%%\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  uint32_t last_rpt_tick2 = HAL_GetTick();
   while (1) {
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    DS18B20_SampleTemp(&huart1);               // Convert (Sample) Temperature Now
-    DS18B20_Temp = DS18B20_ReadTemp(&huart1);  // Read The Conversion Result Temperature Value
-    SEGGER_RTT_printf(0, "time: %d, temperature_1: %d\n", HAL_GetTick(), DS18B20_Temp);
-    DAQData_to_DataLogger[0] = DS18B20_Temp;   // PRE_TEMP
-    DS18B20_SampleTemp(&huart2);               // Convert (Sample) Temperature Now
-    DS18B20_Temp = DS18B20_ReadTemp(&huart2);  // Read The Conversion Result Temperature Value
-    SEGGER_RTT_printf(0, "time: %d, temperature_2: %d\n", HAL_GetTick(), DS18B20_Temp);
-    DAQData_to_DataLogger[1] = DS18B20_Temp;  // POST_TEMP
-    result = voltage * 3300 / 4095;
-    SEGGER_RTT_printf(0, "voltage = %d\n", result);
+    uint32_t now = HAL_GetTick();
 
-    flow_rate = Sensor_Flow_GetRate();
-    SEGGER_RTT_printf(0, "flow rate = %d mL/min\n", (int)flow_rate);
-
-    HAL_Delay(500);
-
-    DAQData_to_DataLogger[2] = (result >> 8) & 0xFF;  // PRESSURE(H)
-    DAQData_to_DataLogger[3] = result & 0xFF;         // PRESSURE(L)
-
-    DAQData_to_DataLogger[4] = ((int)flow_rate >> 8) & 0xFF;   // FLOW_RATE(H)
-    DAQData_to_DataLogger[5] = (int)flow_rate & 0xFF;          // FLOW_RATE(L)
-    DAQData_to_DataLogger[6] = FAN_PWM;                        // FAN_PWM
-    DAQData_to_DataLogger[7] = PUMP_PWM;                       // PUMP_PWM
-
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
-    if (g_daq_enabled) {
-      CAN_SendMsg(CA_DAQ_DATA, DAQData_to_DataLogger);
+    if(now - last_rpt_tick2 >= DAQ_REPORT_INTERVAL_MS){
+      DAQ_SendReport();
+      HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+      SEGGER_RTT_printf(0, "[DAQ] INV_L=%d INV_R=%d BMS=%d FAN=%d%% PUMP=%d%%\n",
+                        g_inv_left_voltage, g_inv_right_voltage, g_bms_voltage,
+                        FAN_PWM, PUMP_PWM);
+      last_rpt_tick2 = now;
     }
-    CAN_PrintAll();
-    HAL_Delay(500);
   }
   /* USER CODE END 3 */
 }
