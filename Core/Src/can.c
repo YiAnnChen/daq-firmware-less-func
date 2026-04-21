@@ -23,19 +23,20 @@
 /* USER CODE BEGIN 0 */
 #include <stdbool.h>
 #include <string.h>
+
 #include "can_addr_def.h"
 #include "can_log.h"
 
-//received voltage storage
-volatile uint16_t g_inv_left_voltage = 0; //unit: 0.1V, from 0x10
-volatile uint16_t g_inv_right_voltage = 0;//unit: 0.1V, from 0x11
-volatile uint16_t g_bms_voltage = 0; //unit: 0.1V, from 0x40
+// received voltage storage
+volatile uint16_t g_inv_left_voltage = 0;   // unit: 0.1V, from 0x10
+volatile uint16_t g_inv_right_voltage = 0;  // unit: 0.1V, from 0x11
+volatile uint16_t g_bms_voltage = 0;        // unit: 0.1V, from 0x40
 
-//set true once at least one voltage data arrives 
+// set true once at least one voltage data arrives
 volatile bool g_voltage_received = false;
 
-//DAQ outgoing buffer and enable flag
-uint8_t DAQData_to_DataLogger[8]={0};
+// DAQ outgoing buffer and enable flag
+uint8_t DAQData_to_DataLogger[8] = {0};
 volatile bool g_daq_enabled = true;
 
 /* USER CODE END 0 */
@@ -52,15 +53,15 @@ void MX_CAN_Init(void) {
 
   /* USER CODE END CAN_Init 1 */
   hcan.Instance = CAN1;
-  hcan.Init.Prescaler = 24;
+  hcan.Init.Prescaler = 3;
   hcan.Init.Mode = CAN_MODE_NORMAL;
   hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan.Init.TimeSeg1 = CAN_BS1_2TQ;
-  hcan.Init.TimeSeg2 = CAN_BS2_3TQ;
+  hcan.Init.TimeSeg1 = CAN_BS1_3TQ;
+  hcan.Init.TimeSeg2 = CAN_BS2_4TQ;
   hcan.Init.TimeTriggeredMode = DISABLE;
-  hcan.Init.AutoBusOff = DISABLE;
+  hcan.Init.AutoBusOff = ENABLE;
   hcan.Init.AutoWakeUp = DISABLE;
-  hcan.Init.AutoRetransmission = DISABLE;
+  hcan.Init.AutoRetransmission = ENABLE;
   hcan.Init.ReceiveFifoLocked = DISABLE;
   hcan.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan) != HAL_OK) {
@@ -95,7 +96,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle) {
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    __HAL_AFIO_REMAP_CAN1_2(); // Remap CAN1 to PB8/PB9
+    __HAL_AFIO_REMAP_CAN1_2();
 
     /* CAN1 interrupt Init */
     HAL_NVIC_SetPriority(USB_HP_CAN1_TX_IRQn, 0, 0);
@@ -152,24 +153,24 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle) {
 uint8_t bsp_can1_filter_config(void) {
   CAN_FilterTypeDef f = {0};
 
-  //Bank 0: INV + BMS voltages
+  // Bank 0: INV + BMS voltages
   f.FilterBank = 0;
   f.FilterActivation = ENABLE;
   f.FilterFIFOAssignment = CAN_FILTER_FIFO0;
   f.FilterMode = CAN_FILTERMODE_IDLIST;
   f.FilterScale = CAN_FILTERSCALE_16BIT;
-  f.FilterIdHigh = (CA_INV_LEFT_VOLTAGE << 5) ; // Standard ID is left-aligned in the 16-bit filter register
+  f.FilterIdHigh = (CA_INV_LEFT_VOLTAGE << 5);  // Standard ID is left-aligned in the 16-bit filter register
   f.FilterIdLow = (CA_INV_RIGHT_VOLTAGE << 5);
   f.FilterMaskIdHigh = (CA_BMS_DATA1 << 5);
   f.FilterMaskIdLow = (CA_BMS_DATA2 << 5);
   if (HAL_CAN_ConfigFilter(&hcan, &f) != HAL_OK) return 0;
 
-  //Bank 1: DAQ enable
+  // Bank 1: DAQ enable
   f.FilterBank = 1;
   f.FilterIdHigh = (CA_DAQ_EN << 5);
-  f.FilterIdLow      = (CA_DAQ_EN << 5);
+  f.FilterIdLow = (CA_DAQ_EN << 5);
   f.FilterMaskIdHigh = (CA_DAQ_EN << 5);
-  f.FilterMaskIdLow  = (CA_DAQ_EN << 5);
+  f.FilterMaskIdLow = (CA_DAQ_EN << 5);
   return (HAL_CAN_ConfigFilter(&hcan, &f) == HAL_OK);
 }
 
@@ -188,7 +189,7 @@ void CAN_SendMsg(uint16_t msgID, uint8_t* Data) {
       // Timeout after 10ms
       return;
     }
-    (void)HAL_CAN_AddTxMessage(&hcan, &TxHeader, Data, &TxMailbox); // Attempt to add message to mailbox
+    (void)HAL_CAN_AddTxMessage(&hcan, &TxHeader, Data, &TxMailbox);  // Attempt to add message to mailbox
   }
 }
 
@@ -196,35 +197,34 @@ static CAN_RxHeaderTypeDef sRxHeader;
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
   uint8_t data[8];
   if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &sRxHeader, data) != HAL_OK) return;
-  if (sRxHeader.IDE != CAN_ID_STD ) return;
-  
-  switch((uint16_t) sRxHeader.StdId){
+  if (sRxHeader.IDE != CAN_ID_STD) return;
+
+  switch ((uint16_t)sRxHeader.StdId) {
     case CA_INV_LEFT_VOLTAGE:
       g_inv_left_voltage = ((uint16_t)data[0] << 8) | data[1];
       g_voltage_received = true;
-      SEGGER_RTT_printf(0, "[CAN] INV_L = %d (x0.1V)\n", g_inv_left_voltage);
+      SEGGER_RTT_printf(0, "CAN INV_L = %d (x0.1V)\n", g_inv_left_voltage);
       break;
     case CA_INV_RIGHT_VOLTAGE:
       g_inv_right_voltage = ((uint16_t)data[0] << 8) | data[1];
       g_voltage_received = true;
-      SEGGER_RTT_printf(0, "[CAN] INV_R = %d (x0.1V)\n", g_inv_right_voltage);
+      SEGGER_RTT_printf(0, "CAN INV_R = %d (x0.1V)\n", g_inv_right_voltage);
       break;
     case CA_BMS_DATA1:
       g_bms_voltage = ((uint16_t)data[0] << 8) | data[1];
       g_voltage_received = true;
-      SEGGER_RTT_printf(0, "[CAN] BMS   = %d (x0.1V)\n", g_bms_voltage);
+      SEGGER_RTT_printf(0, "CAN BMS   = %d (x0.1V)\n", g_bms_voltage);
       break;
     case CA_BMS_DATA2:
       //  Reserved for future BMS fields
-       break;
+      break;
     case CA_DAQ_EN:
       g_daq_enabled = (data[CA_DAQ_EN_IDX] != 0);
-      SEGGER_RTT_printf(0, "[CAN] DAQ_EN = %d\n", (int)g_daq_enabled);
+      SEGGER_RTT_printf(0, "CAN DAQ_EN = %d\n", (int)g_daq_enabled);
       break;
 
     default:
-       break;
+      break;
   }
-
- }
+}
 /* USER CODE END 1 */

@@ -69,3 +69,4 @@ uint8_t bsp_can1_filter_config(void);
 #endif
 
 #endif /* __CAN_H__ */
+
