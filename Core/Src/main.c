@@ -120,6 +120,7 @@ int main(void) {
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
   HAL_Delay(500);
+  SEGGER_RTT_printf(0, "Today is 5/4.\n");
   SEGGER_RTT_printf(0, "DAQ start\n");
 
   bsp_can1_filter_config();
@@ -134,8 +135,10 @@ int main(void) {
 
   // MODE 1: Wait for at least one voltage frame from inverter / BMS
   SEGGER_RTT_printf(0, "DAQ waiting for voltage frames...\n");
+  uint8_t wait_start = HAL_GetTick();
   while (!g_voltage_received) {
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);  // blink LED while waiting
+    if (HAL_GetTick() - wait_start > 5000) break;  // waiting for 5 seconds
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);        // blink LED while waiting
     HAL_Delay(200);
   }
   SEGGER_RTT_printf(0, "DAQ voltage received! INV_L=%d INV_R=%d BMS=%d (x0.1V)\n", g_inv_left_voltage,

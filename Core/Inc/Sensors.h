@@ -2,9 +2,10 @@
 #define _SENSOR_H
 
 #include <stdlib.h>
-#include "main.h"
-#include "SEGGER_RTT.h"
 
+#include "SEGGER_RTT.h"
+#include "main.h"
+#include "stm32f1xx_hal_uart.h"
 
 // water flow rate
 void Sensor_Flow_ProcessPulse(uint32_t capture_value);
@@ -17,6 +18,5 @@ uint8_t DS18B20_Init(UART_HandleTypeDef* huart);
 void DS18B20_SampleTemp(UART_HandleTypeDef* huart);
 int DS18B20_ReadTemp(UART_HandleTypeDef* huart);
 
-
-// 
+//
 #endif

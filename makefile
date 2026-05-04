@@ -2,8 +2,7 @@ BUILD_DIR = build
 TARGET := stm32f103c8
 RTT_ADDR := 0x20000000
 BUILD_TYPE := Debug
-PROJ_NAME := daq-firmware
-
+PROJ_NAME := daq-firmware-less-func
 all:
 	mkdir -p $(BUILD_DIR)
 	cd $(BUILD_DIR) && cmake .. -GNinja -DCMAKE_BUILD_TYPE=$(BUILD_TYPE)
